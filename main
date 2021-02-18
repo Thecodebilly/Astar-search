@@ -1,0 +1,264 @@
+from shapely import geometry
+import pygame, random, math
+
+color = (74, 150, 0)
+white = (255, 255, 255)
+width = 1000
+height = 600
+area = width * height
+poly_num = random.randint(10, 20)
+speed = 5
+allTheGons = []
+endpoints = (width - 10, 0), (width, 0), (width, 10), (width - 10, 10)
+pygame.init()
+screen = pygame.display.set_mode((width, height))
+screen.fill((0, 10, 180))
+
+
+class Polygon:
+    pts = []
+    drawing = []
+
+    def __init__(self):
+
+        self.tiltAngle = random.uniform(0, 1) * 2 * math.pi
+        self.numSides = random.randint(3, 7)
+        self.radius = random.uniform(.1, .50) * area / (width + height)
+        self.x = random.uniform(.3, .7) * width
+        self.y = random.uniform(.3, .7) * height
+
+        allTheGons.append(geometry.Polygon(endpoints))
+
+    def new(self):
+        self.drawing.clear()
+        self.pts.clear()
+
+        for i in range(self.numSides):
+            self.x = self.x + self.radius * math.cos(self.tiltAngle + math.pi * 2 * i / self.numSides)
+            self.y = self.y + self.radius * math.sin(self.tiltAngle + math.pi * 2 * i / self.numSides)
+            self.drawing.append([int(self.x), int(self.y)])
+            self.pts.append(geometry.Point([int(self.x), int(self.y)]))
+
+        intersection = True
+        while intersection:
+            intersection = False
+            poly = geometry.Polygon([[p.x, p.y] for p in self.pts])
+            if allTheGons:
+
+                for u in range(len(allTheGons)):
+                    intersection = poly.intersects(allTheGons[u])
+                    if intersection:
+                        Polygon.randomize(self)
+                        break
+
+        allTheGons.append(poly)
+
+        pygame.draw.polygon(screen, color, self.drawing)
+        pygame.draw.polygon(screen, (165, 42, 42), endpoints)
+        pygame.draw.line(screen, (0, 0, 0), (width - 10, 5), (width, 5))
+        lock = (width - 7.5, 2.5), (width - 2.5, 2.5), (width - 7.5, 7.5), (width - 2.5, 7.5)
+        pygame.draw.polygon(screen, (192, 192, 192), lock)
+
+    def randomize(self):
+        self.pts.clear()
+        self.drawing.clear()
+        self.tiltAngle = random.uniform(0, 1) * 2 * math.pi
+        self.numSides = random.randint(3, 10)
+        self.radius = random.uniform(.1, .3) * area / (width + height)
+        self.x = random.uniform(.4, .7) * width
+        self.y = random.uniform(.1, .6) * height
+
+        for i in range(self.numSides):
+            self.x = self.x + self.radius * math.cos(self.tiltAngle + math.pi * 2 * i / self.numSides)
+            self.y = self.y + self.radius * math.sin(self.tiltAngle + math.pi * 2 * i / self.numSides)
+            self.drawing.append([int(self.x), int(self.y)])
+            self.pts.append(geometry.Point([int(self.x), int(self.y)]))
+
+
+Polygons = []
+surfaces = []
+nodes = []
+
+
+class Node:
+    def __init__(self, point, parent=None):
+        self.point = point
+        self.parent = parent
+        self.g = 0
+        self.f = 0
+        self.h = 0
+
+    def updateG(self, g):
+        self.g += g
+
+    def updateF(self, f):
+        self.f = f
+
+    def updateH(self, h):
+        self.h = h
+
+    def updateParent(self, parent):
+        self.parent = parent
+
+    def ZERO(self):
+        self.f = 0
+        self.g = 0
+        self.h = 0
+
+
+def euclidianDist(point1, point2):
+    return math.sqrt((math.pow((point2[0] - point1[0]), 2)) + (math.pow((point2[1] - point1[1]), 2)))
+
+
+def collides(point1, point2, alltheGons):
+    line1 = geometry.LineString([point1, point2])
+
+    itis = False
+    for a in range(len(alltheGons)):
+        if line1.within(alltheGons[a]):
+            itis = True
+
+    return itis
+
+
+def ACTION(actionlocation, theGons):
+    points = []
+    lines = []
+    linestoremove = []
+    for q in range(len(theGons)):
+        points = list(theGons[q].exterior.coords)
+
+        for i in range(len(points) - 1):
+            point = points.pop()
+            lines.append(geometry.LineString([actionlocation, point]))
+    for w in range(len(lines)):
+        remove = False
+        for a in range(len(theGons)):
+            if lines[w].crosses(theGons[a]):
+                remove = True
+        if remove:
+            linestoremove.append(lines[w])
+
+    for a in range(len(linestoremove)):
+        lines.remove(linestoremove[a])
+    return lines
+
+
+# generating polygons
+while len(Polygons) < poly_num:
+    new = Polygon()
+
+    Polygons.append(new)
+    new.new()
+    pygame.display.update()
+
+# drawing line
+start = (0, height)
+end = (width, 0)
+location = start
+pygame.display.update()
+
+# lines from start
+
+z = 0
+openList = []
+closedList = []
+lineOfSight = ACTION(location, allTheGons)
+goalloc = (width - 10, 10)
+goal = Node(goalloc, None)
+begin = Node(location, None)
+Node.ZERO(begin)
+Node.ZERO(goal)
+begin.updateG(euclidianDist(location, lineOfSight[0].coords[1]))
+begin.updateH(euclidianDist(location, goal.point))
+
+openList.append(begin)
+currentNode = openList[0]
+
+
+def isinbounds(point):
+    inbounds = True
+
+    if point[1] > height or point[1] < 0:
+
+        inbounds = False
+    if point[0] > width or point[0] < 0:
+
+        inbounds = False
+
+    return inbounds
+
+
+while len(openList) > 0:
+
+    lowest = True
+    currentNode = openList[0]
+    index = 0
+    for z in range(len(openList)):
+        if openList[z].f < currentNode.f:
+            currentNode = openList[z]
+            index = z
+
+    # if lowest:
+    # currentNode is lowest
+    # index = 0
+
+    closedList.append(openList.pop(index))
+
+    if currentNode.point == goal.point:
+        print("found")
+        break
+
+    lineOfSight = ACTION(currentNode.point, allTheGons)
+    ports = []
+
+    for n in range(len(lineOfSight)):
+        newport = Node(lineOfSight[n].coords[1], currentNode)
+        ports.append(newport)
+
+    for port in ports:
+        inList = False
+        if collides(currentNode.point, port.point, allTheGons):
+            inList = True
+        if not isinbounds(port.point):
+            inList = True
+        for oldport in openList:
+            if port.point == oldport.point:
+                inList = True
+                if port.g < oldport.g:
+                    oldport.updateH(euclidianDist(currentNode.point, goal.point))
+                    oldport.updateG(euclidianDist(currentNode.point, port.point))
+                    oldport.updateF(port.h + port.g)
+                    oldport.updateParent(currentNode)
+                    continue
+        for closedport in closedList:
+            if port.point == closedport.point:
+                inList = True
+
+        if inList is False:
+            openList.append(port)
+            print(len(openList))
+            pygame.draw.line(screen, (123, 123, 123), currentNode.point, port.point)
+            pygame.display.update()
+            if port.point == goal.point:
+                break
+    if port.point == goal.point:
+        currentNode = port
+        break
+
+while currentNode.parent is not None:
+    # pygame.draw.line(screen, white, currentNode.parent.points, currentNode.points)
+    # pygame.display.update()
+
+    pygame.draw.line(screen, (255, 0, 0), currentNode.parent.point, currentNode.point)
+    pygame.display.update()
+    print(currentNode.point)
+    currentNode = currentNode.parent
+
+# when you reach goal backtrack with parents in order to get path to draw
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
