@@ -6,7 +6,7 @@ white = (255, 255, 255)
 width = 1000
 height = 600
 area = width * height
-poly_num = random.randint(10, 20)
+poly_num = random.randint(10, 15)
 speed = 5
 allTheGons = []
 endpoints = (width - 10, 0), (width, 0), (width, 10), (width - 10, 10)
@@ -169,7 +169,6 @@ goal = Node(goalloc, None)
 begin = Node(location, None)
 Node.ZERO(begin)
 Node.ZERO(goal)
-begin.updateG(euclidianDist(location, lineOfSight[0].coords[1]))
 begin.updateH(euclidianDist(location, goal.point))
 
 openList.append(begin)
@@ -227,12 +226,13 @@ while len(openList) > 0:
                 inList = True
                 if port.g < oldport.g:
                     oldport.updateH(euclidianDist(currentNode.point, goal.point))
-                    oldport.updateG(euclidianDist(currentNode.point, port.point))
+                    port.g=currentNode.g+euclidianDist(currentNode.point, port.point)
                     oldport.updateF(port.h + port.g)
                     oldport.updateParent(currentNode)
                     continue
         for closedport in closedList:
             if port.point == closedport.point:
+                print(port.point==closedport.point)
                 inList = True
 
         if inList is False:
@@ -240,21 +240,15 @@ while len(openList) > 0:
             print(len(openList))
             pygame.draw.line(screen, (123, 123, 123), currentNode.point, port.point)
             pygame.display.update()
-            if port.point == goal.point:
-                break
-    if port.point == goal.point:
-        currentNode = port
-        break
 
 while currentNode.parent is not None:
     # pygame.draw.line(screen, white, currentNode.parent.points, currentNode.points)
     # pygame.display.update()
 
     pygame.draw.line(screen, (255, 0, 0), currentNode.parent.point, currentNode.point)
-    pygame.display.update()
     print(currentNode.point)
     currentNode = currentNode.parent
-
+pygame.display.update()
 # when you reach goal backtrack with parents in order to get path to draw
 
 while True:
