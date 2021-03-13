@@ -180,9 +180,10 @@ while not totalquit:
     nodes = []
 
     # generating polygons
+    totalquit = False
     theInput = True
     while theInput:
-        Random = input("Do you want the pre-generated environment? (type quit to quit)")
+        Random = input("Do you want the pre-generated environment? (type quit to quit) ")
         Random = Random.strip().lower()
         if Random == "quit":
             totalquit = True
@@ -195,10 +196,10 @@ while not totalquit:
                 Random = True
                 break
             else:
-                print("Invalid input, type yes or no")
+                print("Invalid input, type yes or no ")
     if totalquit:
         break
-    c = input("Enter a C value.")
+    c = input("Enter a C value. ")
     screen = pygame.display.set_mode((width, height))
     screen.fill((0, 10, 180))
     if Random:
@@ -248,7 +249,6 @@ while not totalquit:
         closedList.append(openList.pop(index))
 
         if currentNode.point == goal.point:
-            print("found")
             break
 
         lineOfSight = ACTION(currentNode.point, allTheGons)
@@ -278,15 +278,16 @@ while not totalquit:
                         continue
             for closedport in closedList:
                 if port.point == closedport.point:
-                    print(port.point == closedport.point)
+                    #print(port.point == closedport.point)
                     inList = True
 
             if inList is False:
                 openList.append(port)
-                print(len(openList))
+                # print(len(openList))
                 pygame.draw.line(screen, (123, 123, 123), currentNode.point, port.point)
                 pygame.display.update()
-
+    if currentNode.parent is None:
+        print("No path found")
     while currentNode.parent is not None:
         pygame.draw.line(screen, (255, 0, 0), currentNode.parent.point, currentNode.point)
         print(currentNode.point)
